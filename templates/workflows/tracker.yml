@@ -8,8 +8,10 @@ on:
   issues:
     types: [closed]
 
+# checks: read lets the merge summary report whether CI passed.
 permissions:
   contents: read
+  checks: read
   issues: write
   pull-requests: write
 

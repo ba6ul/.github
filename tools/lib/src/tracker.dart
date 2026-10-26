@@ -103,18 +103,24 @@ class PullRequestEvent {
 }
 
 class CheckSummary {
-  const CheckSummary(this.passed, this.failed);
+  const CheckSummary(this.passed, this.failed, {this.unknown = false});
 
   static const none = CheckSummary(0, 0);
 
+  /// The check results could not be read (usually a missing permission).
+  static const unreadable = CheckSummary(0, 0, unknown: true);
+
   final int passed;
   final int failed;
+  final bool unknown;
 
   /// Only finished checks are counted: the tracker's own run is still in
   /// progress when it writes this, and must not look like a pending failure.
-  String describe() => passed + failed == 0
-      ? 'no finished checks were reported on the PR'
-      : '$passed passed, $failed failed';
+  String describe() => unknown
+      ? 'could not be read (the calling workflow needs "checks: read")'
+      : passed + failed == 0
+          ? 'no finished checks were reported on the PR'
+          : '$passed passed, $failed failed';
 }
 
 class IssueChange {
@@ -195,9 +201,17 @@ List<IssueChange> planPullRequest(
   ];
 }
 
+/// Never throws on a refused read: the status change matters more than the
+/// check summary, so an unreadable result is reported as such in the comment.
 Future<CheckSummary> fetchChecks(Gh gh, String repo, String sha) async {
-  final json = await gh.api('repos/$repo/commits/$sha/check-runs?per_page=100')
-      as Map<String, dynamic>;
+  final Map<String, dynamic> json;
+  try {
+    json = await gh.api('repos/$repo/commits/$sha/check-runs?per_page=100')
+        as Map<String, dynamic>;
+  } on GhException catch (e) {
+    if (e.status == 403 || e.status == 404) return CheckSummary.unreadable;
+    rethrow;
+  }
   var passed = 0;
   var failed = 0;
   for (final r in (json['check_runs'] as List).cast<Map<String, dynamic>>()) {

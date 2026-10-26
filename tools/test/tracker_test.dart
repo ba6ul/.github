@@ -194,6 +194,30 @@ void main() {
           reason: 're-runs must not duplicate the summary');
     });
 
+    test('unreadable checks (403) do not block the status change; the summary says so', () async {
+      final gh = FakeGh({
+        'GET repos/o/r/commits/headsha/check-runs?per_page=100':
+            GhException('Resource not accessible by integration', status: 403),
+        'GET repos/o/r/issues/5': issue(5, labels: ['in review']),
+        'GET repos/o/r/labels/to%20verify': {},
+        'POST repos/o/r/issues/5/labels': [],
+        'DELETE repos/o/r/issues/5/labels/in%20review': [],
+        'GET repos/o/r/issues/5/comments?per_page=100': <Object?>[],
+        'POST repos/o/r/issues/5/comments': {},
+      });
+      final log = await run(gh, prPayload('closed', merged: true));
+      expect(log.single, '#5: now to verify, summary posted');
+      expect(gh.writes.any((w) => w.contains('checks: read')), isTrue);
+    });
+
+    test('a non-permission error reading checks is still raised', () async {
+      final gh = FakeGh({
+        'GET repos/o/r/commits/headsha/check-runs?per_page=100':
+            GhException('boom', status: 500),
+      });
+      expect(() => run(gh, prPayload('closed', merged: true)), throwsA(isA<GhException>()));
+    });
+
     test('closed-without-merge clears the status without a comment', () async {
       final gh = FakeGh({
         'GET repos/o/r/issues/5': issue(5, labels: ['in review']),
