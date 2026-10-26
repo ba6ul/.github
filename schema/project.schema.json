@@ -12,7 +12,11 @@
       "additionalProperties": false,
       "properties": {
         "analyze": { "type": "string", "minLength": 1 },
-        "test": { "type": "string", "minLength": 1 }
+        "test": { "type": "string", "minLength": 1 },
+        "toolchain": {
+          "description": "What CI installs before running the commands. Local tools ignore it. Default: none (the commands must work on the runner as it comes).",
+          "enum": ["dart", "flutter", "none"]
+        }
       }
     },
     "setup": {

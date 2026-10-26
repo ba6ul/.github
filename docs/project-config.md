@@ -14,6 +14,7 @@ name.
 | Key | Purpose | Default |
 |---|---|---|
 | `checks.analyze`, `checks.test` | Commands run from the repo root. Used by CI, release checks and the worktree tool, so they are written once. | none (CI skips) |
+| `checks.toolchain` | What CI installs first: `dart`, `flutter` or `none`. Only CI reads it; it is why the CI caller file is identical in every repo. | `none` |
 | `labels.optional` | Extra labels from `labels/vocabulary.json` to create in this repo. The core labels (`bug`, `feature`, `p1`-`p3`, the four status labels) are always used. | `[]` |
 | `release` | Selects a release profile and its settings. Omit for projects that do not release. | no release commands |
 | `setup`, `worktree` | Owned by the worktree tool (install step, worktree location, files to copy or discard, bypass variable, default branch, remote). Stored here so a repo has one config file, but not defined or validated by this repo. | none |
