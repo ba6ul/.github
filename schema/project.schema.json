@@ -1,0 +1,63 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://raw.githubusercontent.com/ba6ul/.github/main/schema/project.schema.json",
+  "title": "Per-repo project configuration (.github/project.json)",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "checks": {
+      "description": "Commands run from the repo root. Used by CI, the worktree tool and release checks.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "analyze": { "type": "string", "minLength": 1 },
+        "test": { "type": "string", "minLength": 1 }
+      }
+    },
+    "setup": {
+      "description": "Owned by the worktree tool (install step for a fresh worktree). Not validated here.",
+      "type": ["string", "array", "object"]
+    },
+    "worktree": {
+      "description": "Owned by the worktree tool (location, files to copy, files to discard, bypass variable, default branch, remote). Not validated here.",
+      "type": "object"
+    },
+    "labels": {
+      "description": "Core labels are always used. List extra names from labels/vocabulary.json here. The tooling checks names against the vocabulary, so there is one source of truth.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "optional": { "type": "array", "uniqueItems": true, "items": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "release": {
+      "description": "Omit entirely for projects that do not release.",
+      "type": "object",
+      "required": ["profile"],
+      "additionalProperties": false,
+      "properties": {
+        "profile": { "enum": ["flutter-android", "tag-only"] },
+        "versionFile": { "type": "string", "minLength": 1 },
+        "changelog": { "type": "string", "minLength": 1 },
+        "storeNotes": { "type": "string", "minLength": 1 },
+        "build": { "enum": ["local", "ci"] },
+        "publish": { "enum": ["manual", "ci-on-tag"] },
+        "docs": { "type": "string", "minLength": 1 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "profile": { "const": "tag-only" } } },
+          "then": {
+            "properties": {
+              "versionFile": false,
+              "storeNotes": false,
+              "build": false,
+              "publish": false
+            }
+          }
+        }
+      ]
+    }
+  }
+}

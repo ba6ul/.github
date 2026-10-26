@@ -1,0 +1,5 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ba6ul/.github/main/schema/project.schema.json",
+  "checks": { "analyze": "flutter analyze", "test": "flutter test" },
+  "release": { "profile": "flutter-android", "build": "ci", "publish": "ci-on-tag" }
+}

@@ -1,0 +1,14 @@
+{
+  "$schema": "https://raw.githubusercontent.com/ba6ul/.github/main/schema/project.schema.json",
+  "checks": { "analyze": "flutter analyze --no-fatal-infos", "test": "flutter test" },
+  "labels": { "optional": ["chore", "performance", "not-urgent"] },
+  "release": {
+    "profile": "flutter-android",
+    "versionFile": "pubspec.yaml",
+    "changelog": "CHANGELOG.md",
+    "storeNotes": "docs/PLAYSTORE-NOTES.md",
+    "build": "local",
+    "publish": "manual",
+    "docs": "docs/RELEASE.md"
+  }
+}
