@@ -1,0 +1,64 @@
+# Reusable. Runs the commands in the caller's .github/project.json:
+#   checks.toolchain  dart | flutter | none (default none)
+#   checks.analyze    command, run from the repo root
+#   checks.test       command, run from the repo root
+# Commands run in bash, so a repo with several packages can chain them.
+name: ci
+
+on:
+  workflow_call:
+    inputs:
+      runner:
+        description: Runner label. Ubuntu is the cheapest on private repos (Windows minutes count double).
+        type: string
+        default: ubuntu-latest
+
+jobs:
+  checks:
+    runs-on: ${{ inputs.runner }}
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Read .github/project.json
+        id: cfg
+        shell: bash
+        run: |
+          file=.github/project.json
+          toolchain=none; analyze=''; test=''
+          if [ -f "$file" ]; then
+            toolchain=$(jq -r '.checks.toolchain // "none"' "$file")
+            analyze=$(jq -r '.checks.analyze // ""' "$file")
+            test=$(jq -r '.checks.test // ""' "$file")
+          fi
+          {
+            echo "toolchain=$toolchain"
+            echo "analyze=$analyze"
+            echo "test=$test"
+          } >> "$GITHUB_OUTPUT"
+          if [ -z "$analyze" ] && [ -z "$test" ]; then
+            echo "::notice::No checks configured in .github/project.json; nothing to run."
+          fi
+
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
+        if: steps.cfg.outputs.toolchain == 'flutter'
+        with:
+          channel: stable
+          cache: true
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+        if: steps.cfg.outputs.toolchain == 'dart'
+
+      - name: Analyze
+        if: steps.cfg.outputs.analyze != ''
+        shell: bash
+        env:
+          CMD: ${{ steps.cfg.outputs.analyze }}
+        run: eval "$CMD"
+
+      - name: Test
+        if: steps.cfg.outputs.test != ''
+        shell: bash
+        env:
+          CMD: ${{ steps.cfg.outputs.test }}
+        run: eval "$CMD"

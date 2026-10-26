@@ -11,11 +11,13 @@ import 'vocabulary.dart';
 enum FileState { add, identical, differs }
 
 class FilePlan {
-  const FilePlan(this.path, this.source, this.state, {this.note});
+  const FilePlan(this.path, this.content, this.state, {this.note});
 
   /// Path inside the target repo.
   final String path;
-  final File source;
+
+  /// What would be written there.
+  final String content;
   final FileState state;
   final String? note;
 }
@@ -106,8 +108,8 @@ Future<List<String>> _protectionNotes(
   } on GhException {
     notes.add('rulesets: could not be read');
   }
-  notes.add('opt-in and not applied by this version: requiring a PR and passing CI needs '
-      'the CI check name from the shared workflow, which does not exist yet');
+  notes.add('opt-in and not applied by this tool yet: it would require a pull request and the '
+      '"ci / checks" check, which only exists once ci.yml is adopted');
   return notes;
 }
 
@@ -117,8 +119,9 @@ Future<BootstrapPlan> planBootstrap(
   String repo,
   Central central,
   Vocabulary vocabulary,
-  JsonSchema schema,
-) async {
+  JsonSchema schema, {
+  String workflowRef = 'v1',
+}) async {
   final info = await gh.api('repos/$repo') as Map<String, dynamic>;
   final defaultBranch = info['default_branch'] as String;
   final private = info['private'] as bool;
@@ -139,27 +142,37 @@ Future<BootstrapPlan> planBootstrap(
   }
 
   final files = <FilePlan>[];
-  Future<void> consider(String path, File source, {String? note}) async {
+  Future<void> consider(String path, String content, {String? note}) async {
     final existing = await repoFileText(gh, repo, path);
     if (existing == null) {
-      files.add(FilePlan(path, source, FileState.add, note: note));
-    } else if (_normalize(existing) == _normalize(source.readAsStringSync())) {
-      files.add(FilePlan(path, source, FileState.identical));
+      files.add(FilePlan(path, content, FileState.add, note: note));
+    } else if (_normalize(existing) == _normalize(content)) {
+      files.add(FilePlan(path, content, FileState.identical));
     } else {
-      files.add(FilePlan(path, source, FileState.differs,
+      files.add(FilePlan(path, content, FileState.differs,
           note: 'exists with different content; not overwritten'));
     }
   }
 
+  String caller(File template) =>
+      template.readAsStringSync().replaceAll('@v1', '@$workflowRef');
+
   await consider(
     '.github/ISSUE_TEMPLATE/issue.md',
-    central.issueTemplate,
+    central.issueTemplate.readAsStringSync(),
     note: existingTemplates.isEmpty
         ? null
         : 'the repo already has issue templates (${existingTemplates.join(', ')}); '
             'this would be added to the template picker',
   );
-  await consider('.github/pull_request_template.md', central.pullRequestTemplate);
+  await consider('.github/pull_request_template.md',
+      central.pullRequestTemplate.readAsStringSync());
+  await consider('.github/workflows/tracker.yml', caller(central.trackerCaller));
+  final wantsCi = config.config.checks.containsKey('analyze') ||
+      config.config.checks.containsKey('test');
+  if (wantsCi) {
+    await consider('.github/workflows/ci.yml', caller(central.ciCaller));
+  }
 
   final settings = [
     for (final e in desiredSettings.entries)
@@ -185,7 +198,7 @@ List<String> writeFiles(BootstrapPlan plan, Directory clone) {
   for (final f in plan.toAdd) {
     final target = File('${clone.path}/${f.path}');
     target.parent.createSync(recursive: true);
-    target.writeAsStringSync(f.source.readAsStringSync());
+    target.writeAsStringSync(f.content);
     written.add(f.path);
   }
   return written;
@@ -224,7 +237,9 @@ String renderBootstrap(BootstrapPlan p) {
     };
     b.writeln('  $verb: ${f.path}${f.note == null ? '' : ' - ${f.note}'}');
   }
-  b.writeln('  (workflow callers are added once the shared workflows exist)');
+  if (!p.files.any((f) => f.path == '.github/workflows/ci.yml')) {
+    b.writeln('  ci.yml not planned: no checks are listed in .github/project.json');
+  }
 
   b.writeln('\nRepository settings (opt-in with --apply-settings)');
   if (p.settings.isEmpty) {

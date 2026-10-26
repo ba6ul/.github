@@ -15,6 +15,8 @@ class Central {
   File get schemaFile => File('${root.path}/schema/project.schema.json');
   File get issueTemplate => File('${root.path}/templates/issue.md');
   File get pullRequestTemplate => File('${root.path}/templates/pull_request_template.md');
+  File get trackerCaller => File('${root.path}/templates/workflows/tracker.yml');
+  File get ciCaller => File('${root.path}/templates/workflows/ci.yml');
 
   Vocabulary loadVocabulary() => Vocabulary.load(vocabularyFile);
   JsonSchema loadSchema() => JsonSchema.create(schemaFile.readAsStringSync());
