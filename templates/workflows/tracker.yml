@@ -15,4 +15,11 @@ permissions:
 
 jobs:
   tracker:
-    uses: ba6ul/.github/.github/workflows/tracker.yml@v1
+    # Pull requests from forks get a read-only token and cannot change labels.
+    if: github.event_name == 'issues' || github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    concurrency:
+      group: tracker-${{ github.event.pull_request.number || github.event.issue.number }}
+      cancel-in-progress: false
+    steps:
+      - uses: ba6ul/.github/actions/tracker@v1

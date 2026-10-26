@@ -1,0 +1,24 @@
+# Keeps issue status in step with pull requests; see WORKFLOW.md. Never closes
+# an issue. Used as a step in the caller's job (templates/workflows/tracker.yml).
+#
+# A composite action rather than a reusable workflow on purpose: the runner
+# downloads this whole repo at the version the caller names, and
+# github.action_path points into that download, so the tooling is always the
+# same version as the action. (A reusable workflow cannot discover its own ref.)
+name: tracker
+description: Move issues referenced by a pull request through in progress, in review and to verify.
+
+runs:
+  using: composite
+  steps:
+    - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+    - name: Install
+      shell: bash
+      working-directory: ${{ github.action_path }}/../../tools
+      run: dart pub get
+    - name: Update issue status
+      shell: bash
+      working-directory: ${{ github.action_path }}/../../tools
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: dart run bin/repotools.dart tracker

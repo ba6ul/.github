@@ -77,7 +77,7 @@ void main() {
   test('callers point at the requested workflow version', () async {
     final p = await plan(FakeGh(baseRoutes()), ref: 'feat/3-workflows');
     final tracker = p.files.firstWhere((f) => f.path == '.github/workflows/tracker.yml');
-    expect(tracker.content, contains('tracker.yml@feat/3-workflows'));
+    expect(tracker.content, contains('actions/tracker@feat/3-workflows'));
     expect(tracker.content, isNot(contains('@v1')));
     expect((await plan(FakeGh(baseRoutes()))).files.last.content, contains('@v1'));
   });
