@@ -11,7 +11,22 @@ description: Move issues referenced by a pull request through in progress, in re
 runs:
   using: composite
   steps:
-    - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+    # Installed here rather than with dart-lang/setup-dart: that action cannot be
+    # nested inside a composite action (it looks for its problem-matcher file in
+    # the outer action's folder and fails). The version is pinned in this one
+    # place and the download is checksum-verified. Linux runners only.
+    - name: Install Dart SDK
+      shell: bash
+      env:
+        DART_VERSION: 3.8.1
+      run: |
+        set -euo pipefail
+        base="https://storage.googleapis.com/dart-archive/channels/stable/release/${DART_VERSION}/sdk/dartsdk-linux-x64-release.zip"
+        curl -fsSL "$base" -o "$RUNNER_TEMP/dart.zip"
+        expected=$(curl -fsSL "$base.sha256sum" | cut -d' ' -f1)
+        echo "$expected  $RUNNER_TEMP/dart.zip" | sha256sum -c -
+        unzip -q "$RUNNER_TEMP/dart.zip" -d "$RUNNER_TEMP"
+        echo "$RUNNER_TEMP/dart-sdk/bin" >> "$GITHUB_PATH"
     - name: Install
       shell: bash
       working-directory: ${{ github.action_path }}/../../tools
