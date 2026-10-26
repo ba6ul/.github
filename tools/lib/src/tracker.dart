@@ -216,6 +216,9 @@ Future<CheckSummary> fetchChecks(Gh gh, String repo, String sha) async {
   var failed = 0;
   for (final r in (json['check_runs'] as List).cast<Map<String, dynamic>>()) {
     if (r['status'] != 'completed') continue;
+    // The tracker's own earlier runs on this commit are not evidence about the code.
+    final name = (r['name'] as String?) ?? '';
+    if (name == 'tracker' || name.startsWith('tracker /')) continue;
     switch (r['conclusion']) {
       case 'success' || 'neutral' || 'skipped':
         passed++;

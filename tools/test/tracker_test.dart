@@ -210,6 +210,21 @@ void main() {
       expect(gh.writes.any((w) => w.contains('checks: read')), isTrue);
     });
 
+    test('the tracker\'s own check runs are not counted as evidence', () async {
+      final gh = FakeGh({
+        'GET repos/o/r/commits/sha/check-runs?per_page=100': {
+          'check_runs': [
+            {'name': 'ci / checks', 'status': 'completed', 'conclusion': 'success'},
+            {'name': 'tracker', 'status': 'completed', 'conclusion': 'success'},
+            {'name': 'tracker / tracker', 'status': 'completed', 'conclusion': 'failure'},
+            {'name': 'lint', 'status': 'completed', 'conclusion': 'failure'},
+          ],
+        },
+      });
+      final s = await fetchChecks(gh, 'o/r', 'sha');
+      expect((s.passed, s.failed), (1, 1));
+    });
+
     test('a non-permission error reading checks is still raised', () async {
       final gh = FakeGh({
         'GET repos/o/r/commits/headsha/check-runs?per_page=100':
