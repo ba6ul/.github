@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "groups": {
+    "kind": "What sort of work it is. Usually one per issue.",
+    "priority": "How soon it matters relative to the next release.",
+    "parked": "Recorded for later; not part of the current plan.",
+    "status": "Where the work is right now. An open issue with no status label is ready.",
+    "layer": "Optional. Which Clean Architecture layer a change belongs to."
+  },
+  "labels": [
+    { "name": "bug", "group": "kind", "tier": "core", "color": "d73a4a", "description": "Something isn't working", "aliases": [] },
+    { "name": "feature", "group": "kind", "tier": "core", "color": "a2eeef", "description": "A new feature", "aliases": ["enhancement"] },
+    { "name": "chore", "group": "kind", "tier": "optional", "color": "cfd3d7", "description": "Small routine change: text, graphics, posters, housekeeping", "aliases": [] },
+    { "name": "performance", "group": "kind", "tier": "optional", "color": "fbca04", "description": "Code change aimed at making something faster or lighter", "aliases": [] },
+    { "name": "maintenance", "group": "kind", "tier": "optional", "color": "5319e7", "description": "Code quality: refactoring, tests, internal maintainability", "aliases": [] },
+    { "name": "documentation", "group": "kind", "tier": "optional", "color": "0075ca", "description": "Changes to explanations or instructions", "aliases": [] },
+
+    { "name": "p1", "group": "priority", "tier": "core", "color": "b60205", "description": "Must be fixed before the next release", "aliases": [] },
+    { "name": "p2", "group": "priority", "tier": "core", "color": "d93f0b", "description": "Should be in the next release, but not blocking it", "aliases": [] },
+    { "name": "p3", "group": "priority", "tier": "core", "color": "fef2c0", "description": "Nice to have; fine to skip", "aliases": [] },
+
+    { "name": "not-urgent", "group": "parked", "tier": "optional", "color": "ededed", "description": "Parked idea: worth doing eventually, not something to pick up now", "aliases": [] },
+
+    { "name": "in progress", "group": "status", "tier": "core", "color": "c2e0c6", "description": "Work has started", "aliases": [] },
+    { "name": "in review", "group": "status", "tier": "core", "color": "bfd4f2", "description": "A pull request is open and waiting for review", "aliases": [] },
+    { "name": "to verify", "group": "status", "tier": "core", "color": "e99695", "description": "Merged. Waiting for you to confirm it works, then close", "aliases": [] },
+    { "name": "blocked", "group": "status", "tier": "core", "color": "000000", "description": "Cannot proceed; the reason is in the comments", "aliases": [] },
+
+    { "name": "layer:presentation", "group": "layer", "tier": "optional", "color": "bfdadc", "description": "Screens, widgets, state holders", "aliases": [] },
+    { "name": "layer:domain", "group": "layer", "tier": "optional", "color": "bfdadc", "description": "Entities, use cases, repository contracts", "aliases": [] },
+    { "name": "layer:data", "group": "layer", "tier": "optional", "color": "bfdadc", "description": "Repository implementations, data sources, API and storage access", "aliases": [] }
+  ]
+}
