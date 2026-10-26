@@ -38,21 +38,25 @@ void main() {
         'GET repos/o/r/contents/.github/ISSUE_TEMPLATE': notFound(),
         'GET repos/o/r/contents/.github/ISSUE_TEMPLATE/issue.md': notFound(),
         'GET repos/o/r/contents/.github/pull_request_template.md': notFound(),
+        'GET repos/o/r/contents/.github/workflows/tracker.yml': notFound(),
+        'GET repos/o/r/contents/.github/workflows/ci.yml': notFound(),
         'GET repos/o/r/branches/main/protection': notFound(),
         'GET repos/o/r/rulesets': <Object?>[],
         ...extra,
       };
 
-  Future<BootstrapPlan> plan(FakeGh gh) =>
-      planBootstrap(gh, 'o/r', central, vocab, schema);
+  Future<BootstrapPlan> plan(FakeGh gh, {String ref = 'v1'}) =>
+      planBootstrap(gh, 'o/r', central, vocab, schema, workflowRef: ref);
 
-  test('a bare repo gets both templates, no config, and merge settings to fix', () async {
+  test('a bare repo gets both templates and the tracker, no CI without checks, no config', () async {
     final gh = FakeGh(baseRoutes());
     final p = await plan(gh);
     expect(p.toAdd.map((f) => f.path), [
       '.github/ISSUE_TEMPLATE/issue.md',
       '.github/pull_request_template.md',
+      '.github/workflows/tracker.yml',
     ]);
+    expect(renderBootstrap(p), contains('ci.yml not planned'));
     expect(p.configPresent, isFalse);
     expect(p.settings.map((s) => s.key),
         unorderedEquals(['allow_merge_commit', 'allow_rebase_merge', 'delete_branch_on_merge']));
@@ -66,7 +70,25 @@ void main() {
     })));
     expect(p.files[0].state, FileState.identical, reason: 'CRLF vs LF is not a difference');
     expect(p.files[1].state, FileState.differs);
-    expect(p.toAdd, isEmpty);
+    expect(p.toAdd.map((f) => f.path), ['.github/workflows/tracker.yml'],
+        reason: 'only the missing file is planned; nothing existing is overwritten');
+  });
+
+  test('callers point at the requested workflow version', () async {
+    final p = await plan(FakeGh(baseRoutes()), ref: 'feat/3-workflows');
+    final tracker = p.files.firstWhere((f) => f.path == '.github/workflows/tracker.yml');
+    expect(tracker.content, contains('actions/tracker@feat/3-workflows'));
+    expect(tracker.content, isNot(contains('@v1')));
+    expect((await plan(FakeGh(baseRoutes()))).files.last.content, contains('@v1'));
+  });
+
+  test('a repo with checks also gets the CI caller; the config is read, not guessed', () async {
+    final p = await plan(FakeGh(baseRoutes(extra: {
+      'GET repos/o/r/contents/.github/project.json':
+          file('{"checks": {"toolchain": "dart", "test": "dart test"}}'),
+    })));
+    expect(p.config.ok, isTrue);
+    expect(p.toAdd.map((f) => f.path), contains('.github/workflows/ci.yml'));
   });
 
   test('warns when adding a template to a repo that already has templates', () async {
@@ -125,7 +147,7 @@ void main() {
         ..createSync(recursive: true)
         ..writeAsStringSync('mine');
       final written = writeFiles(p, dir);
-      expect(written, ['.github/ISSUE_TEMPLATE/issue.md']);
+      expect(written, ['.github/ISSUE_TEMPLATE/issue.md', '.github/workflows/tracker.yml']);
       expect(File('${dir.path}/.github/pull_request_template.md').readAsStringSync(), 'mine');
       expect(File('${dir.path}/.github/ISSUE_TEMPLATE/issue.md').readAsStringSync(), issueText);
       expect(prText, isNotEmpty);

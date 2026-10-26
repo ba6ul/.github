@@ -1,0 +1,24 @@
+# Checks for this repo's own tooling and shared definitions.
+name: repotools
+
+on:
+  pull_request:
+    paths: ['tools/**', 'labels/**', 'schema/**', 'templates/**', 'examples/**', '.github/workflows/**']
+  push:
+    branches: [main]
+    paths: ['tools/**', 'labels/**', 'schema/**', 'templates/**', 'examples/**', '.github/workflows/**']
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: tools
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: dart-lang/setup-dart@6afc89df92d6eb3834022f73cd65adc8cdfcb92d # v1.8.1
+      - run: dart pub get
+      - run: dart analyze
+      - run: dart test

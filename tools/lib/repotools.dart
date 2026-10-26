@@ -5,4 +5,5 @@ export 'src/gh.dart';
 export 'src/labels_sync.dart';
 export 'src/status.dart';
 export 'src/tags.dart';
+export 'src/tracker.dart';
 export 'src/vocabulary.dart';

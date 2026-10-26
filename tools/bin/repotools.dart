@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/command_runner.dart';
@@ -14,7 +15,8 @@ Future<void> main(List<String> args) async {
             'Defaults to the checkout this tool runs from.')
     ..addCommand(LabelsCommand())
     ..addCommand(BootstrapCommand())
-    ..addCommand(StatusCommand());
+    ..addCommand(StatusCommand())
+    ..addCommand(TrackerCommand());
 
   try {
     exitCode = await runner.run(args) ?? 0;
@@ -97,6 +99,10 @@ class BootstrapCommand extends Command<int> {
           valueHelp: 'path',
           help: 'Write the files that would be added into this local clone '
               '(never overwrites). Commit them through a normal PR.')
+      ..addOption('workflow-ref',
+          defaultsTo: 'v1',
+          help: 'Version of the shared workflows the written callers point at. '
+              'Use a branch name to test before a tag exists.')
       ..addFlag('apply-settings',
           help: 'Set squash-only merging and delete-branch-on-merge.');
   }
@@ -118,6 +124,7 @@ class BootstrapCommand extends Command<int> {
       central,
       central.loadVocabulary(),
       central.loadSchema(),
+      workflowRef: argResults!['workflow-ref'] as String,
     );
     stdout.write(renderBootstrap(plan));
 
@@ -139,6 +146,47 @@ class BootstrapCommand extends Command<int> {
       stdout.writeln('\nSettings updated: '
           '${plan.settings.isEmpty ? 'nothing to change' : plan.settings.map((s) => s.key).join(', ')}');
     }
+    return 0;
+  }
+}
+
+class TrackerCommand extends Command<int> {
+  TrackerCommand() {
+    argParser
+      ..addOption('repo', help: 'owner/name (default: \$GITHUB_REPOSITORY)')
+      ..addOption('event-name', help: 'Default: \$GITHUB_EVENT_NAME')
+      ..addOption('event-path', help: 'Event payload JSON. Default: \$GITHUB_EVENT_PATH')
+      ..addFlag('dry-run', help: 'Read from GitHub but only print what would be written.');
+  }
+
+  @override
+  String get name => 'tracker';
+  @override
+  String get description =>
+      'Move the issues a pull request references through in progress, in review and to verify. Run by the shared workflow.';
+
+  @override
+  Future<int> run() async {
+    final env = Platform.environment;
+    final repo = (argResults!['repo'] as String?) ?? env['GITHUB_REPOSITORY'];
+    final eventName = (argResults!['event-name'] as String?) ?? env['GITHUB_EVENT_NAME'];
+    final eventPath = (argResults!['event-path'] as String?) ?? env['GITHUB_EVENT_PATH'];
+    if (repo == null || eventName == null || eventPath == null) {
+      usageException('repo, event name and event path are required '
+          '(flags or GITHUB_* environment variables)');
+    }
+    final payload = jsonDecode(File(eventPath).readAsStringSync()) as Map<String, dynamic>;
+    final dryRun = argResults!['dry-run'] as bool;
+    final Gh gh = dryRun ? ReadOnlyGh(ProcessGh(), stdout.writeln) : ProcessGh();
+
+    final log = await runTracker(
+      gh: gh,
+      repo: repo,
+      eventName: eventName,
+      payload: payload,
+      vocabulary: _central(this).loadVocabulary(),
+    );
+    log.forEach(stdout.writeln);
     return 0;
   }
 }

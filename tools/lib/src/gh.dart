@@ -25,6 +25,26 @@ abstract class Gh {
   });
 }
 
+/// Lets reads through and only reports what any write would have been.
+class ReadOnlyGh implements Gh {
+  ReadOnlyGh(this._inner, this._log);
+
+  final Gh _inner;
+  final void Function(String line) _log;
+
+  @override
+  Future<Object?> api(
+    String path, {
+    String method = 'GET',
+    Map<String, Object?>? body,
+    bool paginate = false,
+  }) async {
+    if (method == 'GET') return _inner.api(path, paginate: paginate);
+    _log('would $method $path${body == null ? '' : ' $body'}');
+    return null;
+  }
+}
+
 /// Runs the installed `gh` CLI, so authentication is whatever `gh` already has
 /// (a login locally, `GH_TOKEN` in Actions).
 class ProcessGh implements Gh {
